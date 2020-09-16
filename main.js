@@ -42,6 +42,8 @@ var slotGame = new Phaser.Class({
 
     // If you touch spin it triggers the spin function that recives as a parameter the list of the containers of the reels
     spinButton.on("pointerdown", () => { this.spin(); });
+    spinButton.on("pointerover", () => { spinButton.setTint(0x8c8c8c); });
+    spinButton.on("pointerout", () => { spinButton.setTint(0xffffff); });
 
 
     this.lineWinImages = [];
