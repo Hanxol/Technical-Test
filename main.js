@@ -31,23 +31,31 @@ var slotGame = new Phaser.Class({
     //Also it's important the order in which you create the images, first create the background and later the things that goes in front
     this.add.image(245, 245, "background");
     this.add.image(100, 530, "prizeWindow");
+    /*prizeWindow = this.add.image(100, 530, "prizeWindow");
+    prizeWindow.setInteractive();
+    prizeWindow.on("pointerdown", () => { this.test(); });*/
     spinButton = this.add.image(390, 530, "spinBtn");
     spinButton.setInteractive();
+    
+    
     // If you touch spin it triggers the spin function that recives as a parameter the list of the containers of the reels
-    spinButton.on("pointerdown", () => { this.spin(containerReels.list); });
+    spinButton.on("pointerdown", () => { this.spin(); });
+    // spinButton.on("pointerout", () => { this.spin(); });
+    // spinButton.on("pointerup", () => { this.spin(); });
     //.on("pointerover", () => { console.log("Pointer over"); })
     //   .on("pointerout", () => { console.log("Pointer out"); })
     //   .on("pointerup", () => { console.log("Pointer up"); })
 
 
 
+    this.lineWinImages = [];
     //Create the reels on here
-    var containerReels = this.add.container(0, 100); // Has the array of images of the 3 reels
+    this.containerReels = this.add.container(0, 100); // Has the array of images of the 3 reels
     // var containerScreen  = this.add.container(0, 0);
-    let reels = wrapper.getReels();
-    for (let i = 0; i < reels.length; i++) {
+    this.getReels = wrapper.getReels();
+    for (let i = 0; i < this.getReels.length; i++) {
       // Creates a container to hold all the images of the reel
-      let containerReelAux = this.add.container(100 + (i * 145), -2465);
+      let containerReelAux = this.add.container(100 + (i * 145), 0);
       // Creates a rectangle of the size of the reel
       let rectangle = this.make.graphics();
       rectangle.fillStyle(0xffffff);
@@ -55,48 +63,116 @@ var slotGame = new Phaser.Class({
       // Creates a geometry Mask with the rectangle and applies it to the container
       let mask = rectangle.createGeometryMask();
       containerReelAux.setMask(mask);
-      for (let j = 0; j < reels[i].length; j++) {
+      /*for (let j = 0; j < this.getReels[i].length; j++) {
         // Adds the corresponding image gotten from the getReels() function and adds the image to the container that holds the images of the entire reel
-        let image = this.add.image(0, j * 145, reels[i][j].toString());
+        let image = this.add.image(0, j * 145, this.getReels[i][j]);
+        image.name = this.getReels[i][j];
         containerReelAux.add(image);
-      }
+      }*/
       // Adds the container of the reel to the Array of reels
-      containerReels.add(containerReelAux);
+      this.containerReels.add(containerReelAux);
     }
-    console.log(containerReels.list);
   },
 
-  spin: function (reels) {
+  spin: function () {
+    
+    spinButton.disableInteractive();
+
+    for (image of this.lineWinImages){
+      image.destroy();
+    }
+    this.lineWinImages = [];
+
     let spin = wrapper.spin();
 
     //The reels don't work so weel this way, so I need to make them after the spin button has been pressed, put the ones on the screen on the same position and arrange 
     //the ones that will scroll down on top of the visible screen
 
+    this.makeTopReels(spin);
+
     this.tweens.add({
-      targets: reels[0],
-      y: { from: -2365, to: (spin.stopPoints[0] * -145) },
+      targets: this.containerReels.list[0],
+      y: 2175,
       ease: "Back",
-      duration: 3000
+      duration: 1500
     });
     this.tweens.add({
-      targets: reels[1],
-      y: { from: -2365, to: (spin.stopPoints[1] * -145) },
+      targets: this.containerReels.list[1],
+      y: 2175,
       ease: "Back",
-      duration: 3000,
+      duration: 1500,
       delay: 100
     });
     this.tweens.add({
-      targets: reels[2],
-      y: { from: -2365, to: (spin.stopPoints[2] * -145) },
+      targets: this.containerReels.list[2],
+      y: 2175,
       ease: "Back",
-      duration: 3000,
-      delay: 200
+      duration: 1500,
+      delay: 200,
+      callbackScope: this,
+      onComplete: function () {
+        for (wins in spin.prizes){
+          this.checkPrizes(spin.prizes[wins].lineId);
+        }
+        spinButton.setInteractive();
+      }
     });
 
     console.log(spin);
   },
 
+  makeTopReels: function (spinResults) {
+    console.log(this.getReels);
+
+    for (let i = 0; i < 3; i++) {
+      // Erase the old images and makes the containers go back to the starting position (of the spin animation)
+      this.containerReels.list[i].list = [];
+      this.containerReels.list[i].y = 0;
+      // Chooses a image to start from, going 5 spaces away from the "stop position" and going the opposite way, which will make it move 15 spaces
+      let imageToStart = spinResults.stopPoints[i] - 5;
+      //console.log("Image to start, no changes " + imageToStart);
+      for (let j = 0; j < 15; j++) {
+        imageToStart--;
+        if (imageToStart < 0) {
+          imageToStart += 20;
+        }
+        // Sets the image 
+        let image = this.add.image(0, (-145 * (j + 1)), this.getReels[i][imageToStart]);
+        //console.log("In the loop ImgToStart: " + imageToStart);
+        this.containerReels.list[i].add(image);
+      }
+    }
+  },
+
+  checkPrizes: function (prizes) {
+    switch (prizes) {
+      case 0:
+        this.lineWinImages.push(this.add.image(245, 240, "lineH"));
+        break;
+      case 1:
+        this.lineWinImages.push(this.add.image(245, 100, "lineH"));
+        break;
+      case 2:
+        this.lineWinImages.push(this.add.image(245, 380, "lineH"));
+        break;
+      case 3:
+        this.lineWinImages.push(this.add.image(245, 245, "lineUpDown"));
+        break;
+      case 4:
+        this.lineWinImages.push(this.add.image(245, 245, "lineDownUp"));
+        break;
+
+      default:
+        console.log("Something went wrong");
+        break;
+    }
+  },
+
   update: function () {
+
+    // if (this.lineWinImages.length === 2) {
+    //   spinButton.disableInteractive();
+    // }
 
   }
 });
