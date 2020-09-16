@@ -85,54 +85,51 @@ var slotGame = new Phaser.Class({
     console.log(spin);
 
     this.makeTopReels(spin);
-
     this.tweens.add({
       targets: this.containerReels.list[0],
       y: 2175,
-      ease: "Back",
+      ease: "Back.easeInOut",
+      easeParams: [0.35],
       duration: 3500
     });
     this.tweens.add({
       targets: this.containerReels.list[1],
       y: 2175,
-      ease: "Back",
+      ease: "Back.easeInOut",
+      easeParams: [0.35],
       duration: 3500,
-      delay: 100
+      delay: 200
     });
     this.tweens.add({
       targets: this.containerReels.list[2],
       y: 2175,
-      ease: "Back",
+      ease: "Back.easeInOut",
+      easeParams: [0.35],
       duration: 3500,
-      delay: 200,
+      delay: 400,
       callbackScope: this,
       onComplete: function () {
         for (wins in spin.prizes) {
           this.checkPrizes(spin, spin.prizes[wins].lineId);
         }
         spinButton.setInteractive();
+        for (let i = 0; i < 3; i++) {
+          // Erase the old images and makes the containers go back to the starting position (of the spin animation)
+          this.containerReels.list[i].list = [];
+          this.containerReels.list[i].y = 0;
+
+          // After erasing the old containers with the reels adds the actual images of the spin just spinned, so the next time there is a spin this images are already on place
+          for (let j = 0; j < 3; j++){
+            let image = this.add.image(0, (j * 145), spin.reelsLayout[i][j]);
+            this.containerReels.list[i].add(image);
+          }
+        }
       }
     });
   },
 
   makeTopReels: function (spinResults) {
-    //Saves the last images of the container, the ones on the screen for later use
-    let savedImages = [];
     for (let i = 0; i < 3; i++) {
-      for (let j = this.containerReels.list[i].list.length - 3; j <= this.containerReels.list[i].list.length - 1; j++) {
-        savedImages.push(this.containerReels.list[i].list[j]);
-      }
-      // Erase the old images and makes the containers go back to the starting position (of the spin animation)
-      this.containerReels.list[i].list = [];
-      this.containerReels.list[i].y = 0;
-    }
-    for (let i = 0; i < 3; i++) {
-
-      // Uses the saved images to put them back in place at the star of the spining animation
-      for (let k = 0; k < 3; k++) {
-        let image = this.add.image(savedImages[(i * 3) + k].x, 290 - (145 * k), savedImages[(i * 3) + k].name);
-        this.containerReels.list[i].add(image);
-      }
 
       // Chooses a image to start from, going 5 spaces away from the "stop position" and going the opposite way, which will make it move 15 spaces
       // An example will be, if the stop position is 11 it takes 5 away and it starts going down to the 11 again in this order 6,5,4,3,2,1,19,18,17,16,15,14,13,12,11
