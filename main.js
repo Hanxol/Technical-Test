@@ -31,28 +31,25 @@ var slotGame = new Phaser.Class({
     //Also it's important the order in which you create the images, first create the background and later the things that goes in front
     this.add.image(245, 245, "background");
     this.add.image(100, 530, "prizeWindow");
+    this.winsText = this.add.text(100, 530, "WIN: $0", {fontFamily: "Arial", fontSize: "25px", color: "rgb(27, 55, 104)", fontStyle: "Bold"}).setOrigin(0.5, 0.5);
     /*prizeWindow = this.add.image(100, 530, "prizeWindow");
     prizeWindow.setInteractive();
     prizeWindow.on("pointerdown", () => { this.test(); });*/
     spinButton = this.add.image(390, 530, "spinBtn");
     spinButton.setInteractive();
-    
-    
+
+
+
     // If you touch spin it triggers the spin function that recives as a parameter the list of the containers of the reels
     spinButton.on("pointerdown", () => { this.spin(); });
-    // spinButton.on("pointerout", () => { this.spin(); });
-    // spinButton.on("pointerup", () => { this.spin(); });
-    //.on("pointerover", () => { console.log("Pointer over"); })
-    //   .on("pointerout", () => { console.log("Pointer out"); })
-    //   .on("pointerup", () => { console.log("Pointer up"); })
-
 
 
     this.lineWinImages = [];
-    //Create the reels on here
-    this.containerReels = this.add.container(0, 100); // Has the array of images of the 3 reels
-    // var containerScreen  = this.add.container(0, 0);
     this.getReels = wrapper.getReels();
+    this.containerReels = this.add.container(0, 100); // The container of the 3 containers that have the images of the reels (1 container per reel)
+
+    //Create the reels on here
+    // var containerScreen  = this.add.container(0, 0);
     for (let i = 0; i < this.getReels.length; i++) {
       // Creates a container to hold all the images of the reel
       let containerReelAux = this.add.container(100 + (i * 145), 0);
@@ -63,30 +60,29 @@ var slotGame = new Phaser.Class({
       // Creates a geometry Mask with the rectangle and applies it to the container
       let mask = rectangle.createGeometryMask();
       containerReelAux.setMask(mask);
-      /*for (let j = 0; j < this.getReels[i].length; j++) {
-        // Adds the corresponding image gotten from the getReels() function and adds the image to the container that holds the images of the entire reel
-        let image = this.add.image(0, j * 145, this.getReels[i][j]);
+      for (let j = this.getReels[i].length - 1; j >= this.getReels[i].length - 3; j--) {
+        let position = j - 17;
+        let image = this.add.image(0, (145 * position), this.getReels[i][j]);
         image.name = this.getReels[i][j];
         containerReelAux.add(image);
-      }*/
+      }
       // Adds the container of the reel to the Array of reels
       this.containerReels.add(containerReelAux);
     }
   },
 
   spin: function () {
-    
+
+    this.winsText.text = "WIN: $0";
     spinButton.disableInteractive();
 
-    for (image of this.lineWinImages){
+    for (image of this.lineWinImages) {
       image.destroy();
     }
     this.lineWinImages = [];
 
     let spin = wrapper.spin();
-
-    //The reels don't work so weel this way, so I need to make them after the spin button has been pressed, put the ones on the screen on the same position and arrange 
-    //the ones that will scroll down on top of the visible screen
+    console.log(spin);
 
     this.makeTopReels(spin);
 
@@ -94,57 +90,68 @@ var slotGame = new Phaser.Class({
       targets: this.containerReels.list[0],
       y: 2175,
       ease: "Back",
-      duration: 1500
+      duration: 3500
     });
     this.tweens.add({
       targets: this.containerReels.list[1],
       y: 2175,
       ease: "Back",
-      duration: 1500,
+      duration: 3500,
       delay: 100
     });
     this.tweens.add({
       targets: this.containerReels.list[2],
       y: 2175,
       ease: "Back",
-      duration: 1500,
+      duration: 3500,
       delay: 200,
       callbackScope: this,
       onComplete: function () {
-        for (wins in spin.prizes){
-          this.checkPrizes(spin.prizes[wins].lineId);
+        for (wins in spin.prizes) {
+          this.checkPrizes(spin, spin.prizes[wins].lineId);
         }
         spinButton.setInteractive();
       }
     });
-
-    console.log(spin);
   },
 
   makeTopReels: function (spinResults) {
-    console.log(this.getReels);
-
+    //Saves the last images of the container, the ones on the screen for later use
+    let savedImages = [];
     for (let i = 0; i < 3; i++) {
+      for (let j = this.containerReels.list[i].list.length - 3; j <= this.containerReels.list[i].list.length - 1; j++) {
+        savedImages.push(this.containerReels.list[i].list[j]);
+      }
       // Erase the old images and makes the containers go back to the starting position (of the spin animation)
       this.containerReels.list[i].list = [];
       this.containerReels.list[i].y = 0;
+    }
+    for (let i = 0; i < 3; i++) {
+
+      // Uses the saved images to put them back in place at the star of the spining animation
+      for (let k = 0; k < 3; k++) {
+        let image = this.add.image(savedImages[(i * 3) + k].x, 290 - (145 * k), savedImages[(i * 3) + k].name);
+        this.containerReels.list[i].add(image);
+      }
+
       // Chooses a image to start from, going 5 spaces away from the "stop position" and going the opposite way, which will make it move 15 spaces
+      // An example will be, if the stop position is 11 it takes 5 away and it starts going down to the 11 again in this order 6,5,4,3,2,1,19,18,17,16,15,14,13,12,11
       let imageToStart = spinResults.stopPoints[i] - 5;
-      //console.log("Image to start, no changes " + imageToStart);
       for (let j = 0; j < 15; j++) {
         imageToStart--;
         if (imageToStart < 0) {
           imageToStart += 20;
         }
-        // Sets the image 
+        // Sets the image and saves it on the containers
         let image = this.add.image(0, (-145 * (j + 1)), this.getReels[i][imageToStart]);
+        image.name = this.getReels[i][imageToStart];
         //console.log("In the loop ImgToStart: " + imageToStart);
         this.containerReels.list[i].add(image);
       }
     }
   },
 
-  checkPrizes: function (prizes) {
+  checkPrizes: function (spinInfo, prizes) {
     switch (prizes) {
       case 0:
         this.lineWinImages.push(this.add.image(245, 240, "lineH"));
@@ -166,6 +173,7 @@ var slotGame = new Phaser.Class({
         console.log("Something went wrong");
         break;
     }
+    this.winsText.text = "WIN: $" + spinInfo.winnings;
   },
 
   update: function () {
